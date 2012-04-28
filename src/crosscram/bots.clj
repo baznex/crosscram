@@ -1,29 +1,20 @@
 (ns crosscram.bots
   (:require [crosscram.core :as crosscram])
+  (:require [crosscram.board :as board])
   (:require [clojure.core.match :as match])
-  (:require [clojure.set :as set])
-  (:require clojure.pprint)
   )
 
 (defn brute-force-moves [game]
-  (let [rows (:rows game)
-        columns (:columns game)]
-    (loop [moves (match/match (:next-player game)
-                              :horizontal (crosscram/generate-horizontal rows columns)
-                              :vertical (crosscram/generate-vertical rows columns))]
-
-      (if (apply crosscram/location-empty? (:board game) (first moves))
-        (first moves)
-        (recur (rest moves))))))
+  (first (board/available-moves game)))
 
 (defn random-moves [game]
-  (let [rows (:rows game)
-        columns (:columns game)]
-    (loop [moves (match/match (:next-player game)
-                              :horizontal (crosscram/generate-horizontal rows columns)
-                              :vertical (crosscram/generate-vertical rows columns))]
-      (let [m (set/difference (set moves) (set (map :move (:history game))))
-            random-move (rand-nth (vec m))]
-        (if (apply crosscram/location-empty? (:board game) random-move)
-          random-move
-          (recur (remove #{random-move} m)))))))
+  (rand-nth (board/available-moves game)))
+
+
+(defn -main [rows columns num-games]
+  (println (str "Scores: "
+    (crosscram/play-symmetric
+      (crosscram/new-game (Integer/parseInt rows) (Integer/parseInt columns) :horizontal )
+      brute-force-moves
+      random-moves
+      (Integer/parseInt num-games)))))
