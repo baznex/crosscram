@@ -1,9 +1,15 @@
 (ns crosscram.board
   (:require [clojure.core.match :as match]))
 
-;;
-;; Validation Functions
-;;
+;;;
+;;; Validation Functions
+;;;
+
+(defn valid-empty-space? [board [r c]]
+  (cond
+    (not (< -1 r (count board))) false
+    (not (< -1 c (count (nth board r)))) false
+    :else (nil? (nth (nth board r) c))))
 
 (defn valid-pair? [[a b] [c d]] 
   (cond (= a c) (= 1 (Math/abs (- b d)))
@@ -36,11 +42,12 @@
 (defn can-play-vertical? [board]
   (can-play-horizontal? (apply map vector board)))
 
-;;
-;; Convenience functions for determining possible moves
-;;
+;;;
+;;; Convenience functions for determining possible moves
+;;;
 
 (defn two-d-get [coll [a b]]
+  ; TODO should probably not use get; it returns nil even if out-of-bounds (use nth instead)
   (get (get coll a) b))
 
 (defn location-empty? [board pos-a pos-b]
@@ -65,19 +72,25 @@
   (mapcat (partial generate-vertical-for-column rows)
           (range columns)))
 
-(defn generate-possible-moves [game]
-  (match/match (:next-player game)
-                :horizontal (generate-horizontal (:rows game) (:columns game))
-                :vertical (generate-vertical (:rows game) (:columns game))))
+(defn generate-all-opponents-moves [game]
+  (generate-horizontal (:rows game) (:columns game)))
+
+(defn generate-all-my-moves [game]
+  (generate-horizontal (:rows game) (:columns game)))
+
+(defn available-opposing-moves [game]
+  (filter
+    (fn [arg] (location-empty? (:board game) (first arg) (last arg)))
+    (generate-all-opponents-moves game)))
 
 (defn available-moves [game]
   (filter
     (fn [arg] (location-empty? (:board game) (first arg) (last arg)))
-    (generate-possible-moves game)))
+    (generate-all-my-moves game)))
 
-;;
-;; Board-update functions
-;;
+;;;
+;;; Board-update functions
+;;;
 
 (defn board [rows columns]
   (vec (repeat rows
@@ -88,3 +101,6 @@
   (-> board
     (assoc-in a piece)
     (assoc-in b piece)))
+
+(defn transpose [board]
+  (vec (apply map vector board)))

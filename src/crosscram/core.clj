@@ -9,9 +9,7 @@
                :vertical :horizontal))
 
 (defn over? [game]
-  (match/match (:next-player game)
-               :horizontal (not (board/can-play-horizontal? (:board game)))
-               :vertical  (not (board/can-play-vertical? (:board game)))))
+  (not (board/can-play-horizontal? (:board game))))
 
 (defn winner [game]
   (when (over? game)
@@ -20,36 +18,40 @@
 (defn next-player [game]
   (match/match (:next-player game)
                 :horizontal "horizontal"
-                :vertical "vertical"))
+                :vertical "vertical"
+                _ (:next-player game)))
 
 (defn play-piece [game pos-a pos-b]
   (cond
-    ;; is the game already over?
-    (over? game) (throw (Exception. "The game is already over"))
+    ; is the game already over?
+    (over? game)
+      (throw (Exception. "The game is already over"))
 
-    ;; are the two points valid for this player?
-    (not (match/match (:next-player game)
-                      :horizontal (board/horizontal-pair? pos-a pos-b)
-                      :vertical (board/vertical-pair? pos-a pos-b)))
-    (throw (Exception. (str "Not a valid " (next-player game) " shape: " pos-a pos-b)))
+    ; do the two points form a valid piece?
+    (not (board/horizontal-pair? pos-a pos-b))
+      (throw (Exception. (str "Not a valid " (next-player game) " shape: " pos-a pos-b)))
 
-    ;; is someone trying to play on a spot that is already
-    ;; occupied?
-    (not (board/location-empty? (:board game) pos-a pos-b)) (throw (Exception.
-                                                                     "Can't move here, it's occupied"))
+    ; is someone trying to play on a spot that is already
+    ; occupied?
+    (not (board/location-empty? (:board game) pos-a pos-b))
+      (throw (Exception. "Can't move here, it's occupied"))
 
-    ;; ok, play the piece!
+    ; ok, play the piece!
     :else
     (-> game
-      (assoc :board (board/add-piece (:board game) (inc (count (:history game))) pos-a pos-b))
-      (update-in [:history] #(conj % {:player (:next-player game) :move [pos-a pos-b]}))
-      (assoc :next-player (opposite (:next-player game))))))
+      (assoc :board
+        (board/transpose
+          (board/add-piece (:board game) (inc (count (:history game))) pos-a pos-b)))
+      (update-in [:history]
+        #(conj % {:player (:next-player game) :move [pos-a pos-b]}))
+      (assoc :next-player
+        (opposite (:next-player game))))))
 
-(defn new-game [rows columns start-player]
+(defn new-game [rows columns]
   {:board (board/board rows columns)
    :rows rows
    :columns columns
-   :next-player start-player
+   :next-player :horizontal
    :history []})
 
 (defn play [game bot-a bot-b]
@@ -64,7 +66,7 @@
   (match/match [game1 game2]
     [:horizontal :vertical] {:bot-a 1 :bot-b 0 :draws 0}
     [:vertical :horizontal] {:bot-a 0 :bot-b 1 :draws 0}
-    [_ _] {:bot-a 0 :bot-b 0 :draws 1}))
+    [_ _]                   {:bot-a 0 :bot-b 0 :draws 1}))
 
 (defn play-symmetric [game bot-a bot-b games-to-play]
   (loop [scoreboard {}]
