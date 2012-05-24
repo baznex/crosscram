@@ -73,7 +73,7 @@
           (range columns)))
 
 (defn generate-all-opponents-moves [game]
-  (generate-horizontal (:rows game) (:columns game)))
+  (generate-vertical (:rows game) (:columns game)))
 
 (defn generate-all-my-moves [game]
   (generate-horizontal (:rows game) (:columns game)))
