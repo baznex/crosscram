@@ -4,4 +4,4 @@
                  [org.clojure/core.match "0.2.0-alpha9"]]
   :license  {:name "Eclipse Public License"
              :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :main crosscram.bots)
+  :main ^:skip-aot crosscram.main)

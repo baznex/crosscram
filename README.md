@@ -2,7 +2,10 @@
 
 [Crosscram](http://en.wikipedia.org/wiki/Domineering) is a two-player
 [perfect information](http://en.wikipedia.org/wiki/Perfect_information) game.
-This is a Clojure project for writing AI bots to play against each other.
+This is a Clojure project for writing AI bots to play against each other:
+
+    $ lein run crosscram.samples.eager-walk crosscram.samples.random 13 13 100
+    Scores: {:bot-a 3, :bot-b 66, :draws 31}
 
 The game is played on a two-dimensional board, much like Chess, Checkers
 or Go. The two players alternate turns until one player can no longer
