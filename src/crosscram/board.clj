@@ -27,13 +27,7 @@
     false))
 
 (defn- two-nil? [coll]
-  (= true (reduce (fn [acc elem]
-                    (match/match [acc elem]
-                                 [true _] true
-                                 [0 nil] 1
-                                 [1 nil] true
-                                 [_ _] 0))
-                  0 coll)))
+  (some (partial = [nil nil]) (partition 2 1 coll)))
 
 (defn can-play-horizontal? [board]
   (boolean
