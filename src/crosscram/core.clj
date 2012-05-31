@@ -1,14 +1,12 @@
 (ns crosscram.core
-  (:require [crosscram.board :as board]
-            [clojure.core.match :as match]))
+  (:require [crosscram.board :as board]))
 
+(def orientations #{:horizontal :vertical})
 
 (defn opposite [player]
-  {:pre [(keyword? player)]
-   :post [(keyword? %)]}
-  (match/match player
-               :horizontal :vertical
-               :vertical :horizontal))
+  {:pre [(keyword? player), (contains? orientations player)]
+   :post [(contains? orientations %)]}
+  (first (disj orientations player)))
 
 (defn over? [game]
   (not (board/can-play-horizontal? (:board game))))
@@ -57,15 +55,16 @@
          bot-funs (cycle [bot-a bot-b])]
     (if (over? g)
       g
-      (let [new-game (apply play-piece g ((first bot-funs) g))]
+      (let [move ((first bot-funs) g)
+            _ (println (first bot-funs) move)
+            new-game (apply play-piece g move)]
         (recur new-game (rest bot-funs))))))
 
 (defn score [game1 game2]
-  {:pre [(keyword? game1), (keyword? game2)]}
-  (match/match [game1 game2]
-    [:horizontal :vertical] {:bot-a 1 :bot-b 0 :draws 0}
-    [:vertical :horizontal] {:bot-a 0 :bot-b 1 :draws 0}
-    [_ _]                   {:bot-a 0 :bot-b 0 :draws 1}))
+  {:pre [(contains? orientations game1), (contains? orientations game2)]}
+  (let [outcomes {[:horizontal :vertical] {:bot-a 1 :bot-b 0 :draws 0}
+                  [:vertical :horizontal] {:bot-a 0 :bot-b 1 :draws 0}}]
+    (get outcomes [game1 game2] {:bot-a 0 :bot-b 0 :draws 1})))
 
 (defn play-symmetric [game bot-a bot-b games-to-play]
   (loop [scoreboard {}]
