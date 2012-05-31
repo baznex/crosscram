@@ -1,5 +1,4 @@
-(ns crosscram.board
-  (:require [clojure.core.match :as match]))
+(ns crosscram.board)
 
 ;;;
 ;;; Validation Functions
