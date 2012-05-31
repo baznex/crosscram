@@ -56,7 +56,6 @@
     (if (over? g)
       g
       (let [move ((first bot-funs) g)
-            _ (println (first bot-funs) move)
             new-game (apply play-piece g move)]
         (recur new-game (rest bot-funs))))))
 
