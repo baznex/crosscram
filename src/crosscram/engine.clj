@@ -14,3 +14,6 @@ gives the second player a transposed view of the board.)")
 ;; TODO(timme:2012-05-24) Wait, how would we even decide which player won a
 ;; 3-player game? Last player to place a tile before someone fails, or last
 ;; player standing after successive elimination?
+
+;; TODO: Strip metadata from returned dominoes. Player could be storing state
+;; there or otherwise be up to no good.

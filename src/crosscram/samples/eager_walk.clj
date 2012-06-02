@@ -1,6 +1,6 @@
 (ns crosscram.samples.eager-walk
   "Pick the first available space."
-  (:require [crosscram.board :as board]))
+  (:require [crosscram.game :as cc]))
 
 (defn make-move [game]
-  (first (board/available-moves game)))
+  (first (cc/available-moves (:board game))))
