@@ -1,4 +1,6 @@
-(ns crosscram.board)
+(ns crosscram.board
+  "Functions for working with a crosscram board. This namespace is deprecated;
+  bot code should use crosscram.game instead.")
 
 ;;;
 ;;; Validation Functions

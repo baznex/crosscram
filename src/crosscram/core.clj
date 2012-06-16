@@ -1,4 +1,6 @@
 (ns crosscram.core
+  "Functions for managing a crosscram game. This namespace has been deprecated;
+crosscram.engine replaces it."
   (:require [crosscram.board :as board]))
 
 (defn opposite [player]

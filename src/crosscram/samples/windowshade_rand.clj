@@ -3,12 +3,12 @@
 and weakly prefer even-index columns. If played by iteself, this bot will
 fill in alternating rows (leaving space for itself) and then play the
 remaining rows."
-  (:require [crosscram.board :as board]))
+  (:require [crosscram.game :as game]))
 
 (def separate (juxt filter remove))
 
 (defn make-move [game]
-  (let [all (board/available-moves game)
+  (let [all (game/available-moves game)
         [e_ o_] (separate (comp even? ffirst) all)
         [ee eo] (separate #(even? (second (first %))) e_)
         [oe oo] (separate #(even? (second (first %))) o_)]

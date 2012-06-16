@@ -1,7 +1,8 @@
 (ns crosscram.main
-  (:require [crosscram.core :as cc]))
+  (:require [crosscram.engine :as engine]
+            [crosscram.game :as game]))
 
-(defn load-player
+(defn- load-player
   "Fetch a player map from a namespace, or nil. The map will contain:
 :make-move - The make-move function."
   [ns-name]
@@ -18,10 +19,11 @@
   (let [fns-a (load-player player-a)
         fns-b (load-player player-b)]
     (when (and fns-a fns-b)
-      (let [scores (cc/play-symmetric
-                    (cc/new-game (Integer/parseInt rows)
-                                 (Integer/parseInt columns))
+      (let [dims [(Integer/parseInt rows) (Integer/parseInt columns)]
+            num-games (Integer/parseInt num-games)
+            scores (engine/play-symmetric
+                    (game/make-game dims 0)
                     (:make-move fns-a)
                     (:make-move fns-b)
-                    (Integer/parseInt num-games))]
+                    num-games)]
         (println "Scores:" scores)))))
