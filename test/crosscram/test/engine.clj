@@ -70,4 +70,20 @@
         game (game/make-game [3 3] 0)
         done (play game [bot-h bot-v])]
     (is (= (count (:history done)) 4))
-    (is (= (game/winner done) 0))))
+    (is (= (game/winner done) 0)))
+  ;; error cases
+  (let [bot-h (calvinist [[1 0] [1 1]] [[5 0] [5 1]])
+        bot-v (calvinist [[2 1] [2 2]])
+        done (play (game/make-game [3 3] 0) [bot-h bot-v])]
+    (is (= (count (:history done)) 3))
+    (is (= (-> done :history peek :type) :invalid-move)))
+  (let [bot-h (calvinist [[1 0] [1 1]] 'xyz)
+        bot-v (calvinist [[2 1] [2 2]])
+        done (play (game/make-game [3 3] 0) [bot-h bot-v])]
+    (is (= (count (:history done)) 3))
+    (is (= (-> done :history peek :type) :player-error)))
+  (let [bot-h (calvinist [[1 0] [1 1]])
+        bot-v (fn [& _] (throw (Exception.)))
+        done (play (game/make-game [3 3] 0) [bot-h bot-v])]
+    (is (= (count (:history done)) 2))
+    (is (= (-> done :history peek :type) :player-error))))
