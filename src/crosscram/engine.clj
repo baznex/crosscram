@@ -52,33 +52,38 @@ in), produce an event."
         (assoc evbase :type :player-error, :return val)))
     (assoc evbase :type :player-error, :error (:error result))))
 
-(defn play-step
-  "Step the game forward by one move. "
+(defn ^:internal call-bot
+  "Ask the bot for a move. (Assumes a move is available.)  Returns an event."
+  [game player-fn]
+  {:pre [(:board game), (fn? player-fn)]}
+  (let [timer (promise)
+        result (try {:value (timeit #(player-fn game) timer)}
+                    (catch Exception e {:error e}))]
+    (result->event game result {:player-id (:player-id game)
+                                :duration @timer})))
+
+(defn ^:internal play-step
+  "Step the game forward by one move. Rotates the board to be ready for
+the next player, or returns to original orientation when game is over."
   [game player-fns]
   (let [next-player (:player-id game)
-        evbase {:player-id next-player}]
-    (if (game/can-move? (:board game))
-      (let [player-fn (get player-fns (mod next-player 2))
-            timer (promise)
-            result (try
-                     {:value (timeit #(player-fn game) timer)}
-                     (catch Exception e {:error e}))
-            event (result->event game result (assoc evbase :duration @timer))]
-        (-> game
-            (game/conj-event event)
-            (game/rotate-game)
-            (assoc :over? (not (= :move (:type event))))))
-      (-> game
-          (game/conj-event (assoc evbase :type :cant-move))
-          (game/rotate-game (- next-player))
-          (assoc :over? true)))))
+        event (if (game/can-move? (:board game))
+                (call-bot game (get player-fns (mod next-player 2)))
+                {:type :cant-move, :player-id next-player})
+        over? (not= (:type event) :move)
+        rotate-by (if over? (- next-player) 1)]
+    (-> game
+        (game/conj-event event)
+        (game/rotate-game rotate-by)
+        (assoc :over? over?))))
 
 (defn play
   "Play a game. Returns the final game state, in original orientation."
   [game player-fns]
   {:pre [(vector? player-fns)]}
-  (first (drop-while (complement :over?) (iterate #(play-step % player-fns)
-                                                  game))))
+  (first (drop-while (complement :over?)
+                     (iterate #(play-step % player-fns)
+                              game))))
 
 (defn play-symmetric
   "Play two bots in on a board of the given dimensions for a set number of
