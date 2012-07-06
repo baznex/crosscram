@@ -1,6 +1,5 @@
 (ns crosscram.main
-  (:require [crosscram.engine :as engine]
-            [crosscram.game :as game]))
+  (:require [crosscram.engine :as engine]))
 
 (defn- load-player
   "Fetch a player map from a namespace, or nil. The map will contain:
@@ -22,8 +21,8 @@
       (let [dims [(Integer/parseInt rows) (Integer/parseInt columns)]
             num-games (Integer/parseInt num-games)
             scores (engine/play-symmetric
-                    (game/make-game dims 0)
-                    (:make-move fns-a)
-                    (:make-move fns-b)
+                    dims
+                    [(:make-move fns-a)
+                     (:make-move fns-b)]
                     num-games)]
         (println "Scores:" scores)))))
