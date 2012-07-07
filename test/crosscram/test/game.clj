@@ -29,8 +29,12 @@
   (is (horizontal? [[5 10] [5 9]]))
   (is (not (horizontal? [[9 5] [10 5]])))
   ;; canonical order
-  (is (= (canonical-domino [[0 1] [2 3]])
-         (canonical-domino [[2 3] [0 1]]))))
+  (let [ltor [[0 1] [2 3]]
+        rtol [[2 3] [0 1]]]
+    (is (every? #(= ltor (canonical-domino %)) [ltor rtol]))
+    (is (every? #(nil? (seq (meta %)))
+                ((juxt identity first second)
+                 (canonical-domino ^:a [^:b [0 1] ^:c [2 3]]))))))
 
 (deftest boards-and-moves
   (let [empty (make-board [2 3])

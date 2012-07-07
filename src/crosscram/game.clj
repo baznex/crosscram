@@ -15,9 +15,12 @@ These may also be called coordinates or squares.
 
 ## Dominoes
 
-A domino is a vector of two squares: [[r0 c0] [r1 c1]].
-The order of the squares in a vector is not important, but the game engine
-will not alter it.
+A domino is a vector of two squares: [[r0 c0] [r1 c1]]. The canonical
+order of squares in a domino is from low to high indexes. (Note that
+either the row or column indexes will differ between the two squares,
+depending on orientation.) Bots are allowed to return dominoes in
+either order, but some methods in this ns may declare a need for
+canonical order.
 
 ## Moves
 
@@ -64,10 +67,6 @@ This will sometimes simply be called a game value.")
 ;; In 2 dimensions:
 ;; - A board is a 2-level nesting of vectors. The top-level vector contains
 ;;   the row vectors.
-;; - The order of the squares in a domino is canonically in low to high
-;;   order along the x axis. Bots are allowed to return dominoes in either
-;;   order, but some methods may declare a need for canonical order. The
-;;   history will contain canonical dominoes.
 
 ;;;; Utils
 
@@ -94,9 +93,10 @@ This will sometimes simply be called a game value.")
 
 (defn canonical-domino
   "Answer a domino such that for all representations D1,D2 of a
-domino, (= (canonical-domino d1) (canonical-domino d2))"
+domino, (= (canonical-domino d1) (canonical-domino d2)). Metadata
+is stripped."
   [domino]
-  (into [] (sort domino)))
+  (into [] (sort (map #(with-meta % nil) domino))))
 
 (defn domino-squares
   "Return a sequence of the coordinates occupied by a valid domino."

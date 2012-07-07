@@ -3,10 +3,10 @@
 
 A bot is a function of [game -> domino].
 
-The returned domino must be horizontal; that is, the column coordinates differ
-by 1 but the row coordinates are equal. That is, every player plays
-horizontal, and sees the other player as playing vertical. (The game engine
-gives the second player a transposed view of the board.)"
+The returned domino must be horizontal, meaning the row coordinates
+are equal but the column coordinates differ by 1 Every player plays
+horizontal, and sees the other player as playing vertical. (The
+game engine gives the second player a transposed view of the board.)
 
 If a bot returns an invalid move or an invalid domino or simply throws
 an exception, the bot will lose that game."
@@ -14,6 +14,7 @@ an exception, the bot will lose that game."
 
 ;; TODO(timmc:2012-05-24) In a 3-player game, the winner is the last
 ;; player standing after successive elimination.
+
 ;; TODO: Strip metadata from returned dominoes. Player could be storing state
 ;; there or otherwise be up to no good.
 
@@ -54,6 +55,9 @@ in), produce an event."
   [game player-fn]
   {:pre [(:board game), (fn? player-fn)]}
   (let [timer (promise)
+        ;; TODO(security)(timmc:2012-07-07) validate and canonicalize
+        ;; the domino inside the try/catch. Malicious bots could use
+        ;; reify to make something really ugly.
         result (try {:value (timeit #(player-fn game) timer)}
                     (catch Exception e {:error e}))]
     (result->event game result {:player-id (:player-id game)
