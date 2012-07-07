@@ -8,15 +8,12 @@ by 1 but the row coordinates are equal. That is, every player plays
 horizontal, and sees the other player as playing vertical. (The game engine
 gives the second player a transposed view of the board.)"
 
+If a bot returns an invalid move or an invalid domino or simply throws
+an exception, the bot will lose that game."
   (:require [crosscram.game :as game]))
 
-;; TODO(timmc:2012-05-23) Decide on tournament rules for bots throwing
-;; exceptions, returning nil, returning bad dominoes...
-
-;; TODO(timmc:2012-05-24) Wait, how would we even decide which player won a
-;; 3-player game? Last player to place a tile before someone fails, or last
-;; player standing after successive elimination?
-
+;; TODO(timmc:2012-05-24) In a 3-player game, the winner is the last
+;; player standing after successive elimination.
 ;; TODO: Strip metadata from returned dominoes. Player could be storing state
 ;; there or otherwise be up to no good.
 
@@ -30,8 +27,8 @@ gives the second player a transposed view of the board.)"
 (defn- timeit
   "Run a thunk and deliver the elapsed time in nanoseconds to a promise."
   [thunk prm]
-  ;; TODO: Is this the most appropriate timer?
   {:pre [(cast clojure.lang.IPending prm), (not (realized? prm))]}
+  ;; TODO: Is this the most appropriate timer?
   (let [start (System/nanoTime)]
     (try (thunk)
          (finally
