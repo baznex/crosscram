@@ -34,6 +34,14 @@ to update the UI to the latest game state."
   (let [cb (.getClipBounds gfx)]
     [(.width cb) (.height cb)]))
 
+(let [serializer (agent nil)]
+  (defn ts
+    "Make a function \"thread-safe\" -- all calls to ts-produced fns will be
+run on an agent thread, serially."
+    [f]
+    (fn [& args]
+      (apply send serializer #(apply f (rest %&)) args))))
+
 ;;;; Threads
 
 (def stopping? "Whether the program is stopping."
@@ -124,6 +132,11 @@ or nil if not on a cell."
 
 (declare update-ui-game-state) ;; TODO: Is it possible to avoid this?
 
+(defn horiz-move-for-cell
+  [cell]
+  (when-let [[r c] cell]
+    [[r c] [r (inc c)]]))
+
 (defn make-human-move
   "Block until human has moved, then return move."
   [g]
@@ -135,7 +148,7 @@ or nil if not on a cell."
 (defn complete-human-move
   "Complete the human's move."
   [move]
-  (.put human-moves move)
+  (.put human-moves (horiz-move-for-cell move))
   (reset! human-turn? false))
 
 (defn make-bot-move
@@ -148,14 +161,11 @@ or nil if not on a cell."
   "Start a game loop with a bot and human player."
   [game-state]
   ;; human at index 0 so that rotation by ID makes sense
-  (let [player-fns [make-human-move make-bot-move]]
-    (cc/play game-state
-             (vec (rotate human-player-id player-fns)))))
-
-(defn horiz-move-for-cell
-  [cell]
-  (when-let [[r c] cell]
-    [[r c] [r (inc c)]]))
+  (let [player-fns [make-human-move make-bot-move]
+        ending (cc/play game-state
+                        (vec (rotate human-player-id player-fns)))]
+    ;; time passes...
+    ((ts println) "Game over:" (:history ending))))
 
 ;;;; Rendering - double-buffering and incremental updates
 
@@ -283,6 +293,8 @@ or nil if not on a cell."
 (defn -main
   "Start application. Takes no arguments."
   [& args]
+  (add-watch human-turn? :print #((ts println) "human-turn?" %4))
+  (add-watch game :print #((ts println) "game" %4))
   (let [initial-game (g/make-game dim 0)]
     (SwingUtilities/invokeLater (partial launch-gui initial-game))
     (run-in-background (partial launch-game initial-game) "Game loop")))
