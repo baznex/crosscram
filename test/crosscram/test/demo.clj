@@ -2,6 +2,10 @@
   (:use crosscram.demo
         clojure.test))
 
+(deftest util
+  (is (= (rotate 0 [1 2 3 4 5]) [1 2 3 4 5]))
+  (is (= (rotate 2 [1 2 3 4 5]) [4 5 1 2 3])))
+
 (deftest coordinate-transforms
   (binding [line-width 3
             cell-width 20]

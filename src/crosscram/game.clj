@@ -237,6 +237,11 @@ for the indicated player. The player ID may be 0 or 1."
                   game)]
     (update-in updated [:history] conj event)))
 
+(defn apply-move
+  "Apply a valid, canonicalized domino from the current player."
+  [game domino]
+  (conj-event game {:type :move, :move domino, :player-id (:player-id game)}))
+
 (defn rotate-game
   "Rotate a game from player 0's perspective to the specified player's
 perspective. (Unary form defaults to 1.) Player ID will be used modulo 2.
