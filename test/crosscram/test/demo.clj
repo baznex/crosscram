@@ -4,7 +4,8 @@
 
 (deftest util
   (is (= (rotate 0 [1 2 3 4 5]) [1 2 3 4 5]))
-  (is (= (rotate 2 [1 2 3 4 5]) [4 5 1 2 3])))
+  (is (= (rotate 2 [1 2 3 4 5]) [4 5 1 2 3]))
+  (is (= (rotate -1 [1 2 3 4 5]) [2 3 4 5 1])))
 
 (deftest coordinate-transforms
   (binding [line-width 3

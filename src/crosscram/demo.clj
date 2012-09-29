@@ -10,7 +10,7 @@ When each player fn is called by the game loop, it schedules a Swing event
 to update the UI to the latest game state."
   (:require [crosscram.game :as g]
             [crosscram.engine :as cc])
-  (:require [crosscram.samples.reserves-move :as bot])
+  (:require [crosscram.samples.random :as bot])
   (:import
    [java.util.concurrent LinkedBlockingQueue]
    [javax.swing SwingUtilities UIManager
@@ -25,8 +25,9 @@ to update the UI to the latest game state."
 (defn rotate
   "Rotate a collection right by non-negative n."
   [n coll]
-  {:pre [(or (pos? n) (zero? n))]}
-  (concat (drop n coll) (take n coll)))
+  (let [size (count coll)
+        m (mod (- size n) size)]
+    (concat (drop m coll) (take m coll))))
 
 (defn graphics-size
   "Get the size of a graphics object as [w h]."
@@ -72,7 +73,7 @@ run on an agent thread, serially."
 
 (def dim [5 8])
 
-(def human-player-id 0)
+(def human-player-id 0) ;; FIXME: This is required to be 0 for now.
 (def bot-player-id (mod (inc human-player-id) 2))
 
 ;;;; State
@@ -85,10 +86,6 @@ run on an agent thread, serially."
   (atom (zero? human-player-id)))
 
 (def game "Atom: Game's most recent state, from player 0 perspective."
-  (atom nil))
-
-(def hover "Atom: Cell the mouse is hovering [r c] or nil if a) not hovering
-or b) not the human's turn."
   (atom nil))
 
 ;;;; Geometry
@@ -140,36 +137,30 @@ or nil if not on a cell."
 (defn make-human-move
   "Block until human has moved, then return move."
   [g]
-  (SwingUtilities/invokeLater #(update-ui-game-state g human-player-id))
+  (SwingUtilities/invokeLater (partial update-ui-game-state g))
   (reset! human-turn? true)
   ;; Block until human has moved
   (.take human-moves))
 
 (defn complete-human-move
   "Complete the human's move."
-  [move]
-  (.put human-moves (horiz-move-for-cell move))
+  [cell]
+  (.put human-moves (horiz-move-for-cell cell))
   (reset! human-turn? false))
 
 (defn make-bot-move
   "Make the bot move."
   [g]
-  (SwingUtilities/invokeLater #(update-ui-game-state g bot-player-id))
+  (SwingUtilities/invokeLater (partial update-ui-game-state g))
   (bot/make-move g))
-
-(defn launch-game
-  "Start a game loop with a bot and human player."
-  [game-state]
-  ;; human at index 0 so that rotation by ID makes sense
-  (let [player-fns [make-human-move make-bot-move]
-        ending (cc/play game-state
-                        (vec (rotate human-player-id player-fns)))]
-    ;; time passes...
-    ((ts println) "Game over:" (:history ending))))
 
 ;;;; Rendering - double-buffering and incremental updates
 
 ;; Drawn from player 0 perspective.
+
+(def hover "Atom: Cell the mouse is hovering [r c] or nil if a) not hovering
+or b) not the human's turn."
+  (atom nil))
 
 (def buffer-graphics (promise))
 (def buffer-image (promise))
@@ -181,13 +172,19 @@ or nil if not on a cell."
         yb (canvas-cell-base r)]
     (.fill gfx (Rectangle. xb yb cell-width cell-width))))
 
-(defn render-event
-  "Render an event."
-  [^Graphics2D gfx, event]
-  (when (= (:type event) :move)
-    (.setColor gfx (Color. 50 50 50))
-    (doseq [cell (g/domino-squares (:move event))]
-      (fill-cell gfx cell))))
+(def next-event "Atom of ID of next event to render."
+  (atom 0))
+
+(defn render-new-events
+  "Render any events we haven't seen already."
+  [^Graphics2D gfx, events]
+  (doseq [event-id (range @next-event (count events))
+          :let [event (get events event-id)]]
+    (when (= (:type event) :move)
+      (.setColor gfx (Color. 50 50 50))
+      (doseq [cell (g/domino-squares (:move event))]
+        (fill-cell gfx cell)))
+    (swap! next-event inc)))
 
 (defn render-game
   "Render a game to a graphics object."
@@ -210,30 +207,32 @@ or nil if not on a cell."
       (.fill gfx (Rectangle. (* i (+ cell-width line-width)) 0
                              line-width gh)))
     ;; existing moves
-    (doseq [e (:history game-state)]
-      (render-event gfx e))))
-
-(defn update-ui-game-state
-  "Receive the new game state from a player and render it."
-  [g player-id]
-  (reset! game (g/rotate-game g player-id))
-  (if-let [events (not-empty (:history g))]
-    (render-event @buffer-graphics (peek events))
-    (render-game @buffer-graphics g)))
+    (render-new-events gfx (:history game-state))))
 
 ;;;; GUI
 
 (def ^JComponent canvas nil)
 (def ^JFrame frame nil)
 
+(defn update-ui-game-state
+  "Receive the new game state from a player and render it."
+  [g]
+  (let [g (g/rotate-game g (:player-id g))]
+    (reset! game g)
+    (if-let [events (not-empty (:history g))]
+      (render-new-events @buffer-graphics events)
+      (render-game @buffer-graphics g))
+    (.repaint canvas)))
+
 (defn canvas-mouse-clicked
   [^MouseEvent e]
-  (when @human-turn?
+  (when (and (= (.getButton e) MouseEvent/BUTTON1) @human-turn?)
     (when-let [h @hover]
-      (when (= (.getButton e) MouseEvent/BUTTON1)
-        (complete-human-move h)
-        (reset! hover nil)
-        (.repaint canvas)))))
+      (let [hover-move (horiz-move-for-cell h)]
+        (when (g/valid-move? (:board @game) hover-move)
+          (complete-human-move h)
+          (reset! hover nil)
+          (.repaint canvas))))))
 
 (defn canvas-mouse-moved
   [^MouseEvent e]
@@ -290,11 +289,20 @@ or nil if not on a cell."
   ;; ready!
   (.setVisible frame true))
 
+(defn launch-game
+  "Start a game loop with a bot and human player."
+  [game-state]
+  ;; human at index 0 so that rotation by ID makes sense
+  (let [player-fns [make-human-move make-bot-move]
+        ending (cc/play game-state
+                        (vec (rotate human-player-id player-fns)))]
+    ;; time passes...
+    ((ts println) "Game over:" (:history ending))
+    (SwingUtilities/invokeLater (partial update-ui-game-state ending))))
+
 (defn -main
   "Start application. Takes no arguments."
   [& args]
-  (add-watch human-turn? :print #((ts println) "human-turn?" %4))
-  (add-watch game :print #((ts println) "game" %4))
   (let [initial-game (g/make-game dim 0)]
     (SwingUtilities/invokeLater (partial launch-gui initial-game))
     (run-in-background (partial launch-game initial-game) "Game loop")))
