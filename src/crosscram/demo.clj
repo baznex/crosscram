@@ -166,7 +166,7 @@ or nil if not on a cell."
 
 (defn fill-cell
   "Fill a game cell."
-  [^Graphics2D gfx, [c r]]
+  [^Graphics2D gfx, [r c]]
   (let [xb (canvas-cell-base c)
         yb (canvas-cell-base r)]
     (.fill gfx (Rectangle. xb yb cell-width cell-width))))
@@ -241,7 +241,6 @@ or nil if not on a cell."
     (.drawImage gfx @buffer-image 0 0 nil))
   ;; hover
   (let [hover-move (horiz-move-for-cell @hover)]
-    ;;TODO: Move valid-move logic to event handler to avoid unecessary repaint
     (when (and hover-move (g/valid-move? (:board @game) hover-move))
       (.setColor gfx (Color. 50 255 50))
       (doseq [cell hover-move]
