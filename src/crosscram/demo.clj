@@ -10,7 +10,7 @@ When each player fn is called by the game loop, it schedules a Swing event
 to update the UI to the latest game state."
   (:require [crosscram.game :as g]
             [crosscram.engine :as cc])
-  (:require [crosscram.samples.random :as bot])
+  (:require [crosscram.samples.biggest-space :as bot])
   (:import
    [java.util.concurrent LinkedBlockingQueue]
    [javax.swing SwingUtilities UIManager
@@ -304,7 +304,7 @@ or b) not the human's turn."
 (defn game-results
   "Describe the results of a finished game."
   [ending]
-  {:pre [(not= :move (-> ending :history peek :type))]}
+  {:pre [(:over? ending)]}
   (let [last-event (-> ending :history peek)
         human-won? (= (:player-id last-event) bot-player-id)
         turns (dec (count (:history ending)))]
