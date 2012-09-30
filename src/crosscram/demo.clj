@@ -301,6 +301,15 @@ or b) not the human's turn."
   ;; ready!
   (.setVisible frame true))
 
+(defn game-results
+  "Describe the results of a finished game."
+  [ending]
+  {:pre [(not= :move (-> ending :history peek :type))]}
+  (let [human-won? (= (-> ending :history peek :player-id) bot-player-id)
+        turns (dec (count (:history ending)))]
+    (format "The %s won after %d turn%s."
+            (if human-won? "human" "bot") turns (when-not (= 1 turns) "s"))))
+
 (defn launch-game
   "Start a game loop with a bot and human player."
   [game-state]
@@ -310,7 +319,7 @@ or b) not the human's turn."
                              (vec (rotate human-player-id player-fns)))
                     (catch InterruptedException ie nil))] ;; requires clj > 1.3
     (when ending ;; if not interrupted
-      ((ts println) "Game over:" (:history ending))
+      ((ts println) "Game over:" (game-results ending))
       (SwingUtilities/invokeLater (partial update-ui-game-state ending)))))
 
 (defn launch
