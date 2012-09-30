@@ -255,6 +255,18 @@ or b) not the human's turn."
       (doseq [cell hover-move]
         (fill-cell gfx cell)))))
 
+;;;; Launch
+
+(def run-via-main "Set to true at launch if started via -main."
+  false)
+
+(defn halt-program
+  "Stop all background threads and allow program to exit."
+  []
+  (stop-background-threads)
+  (when run-via-main
+    (shutdown-agents)))
+
 (defn launch-gui
   "Create and display the GUI."
   [game-state]
@@ -278,7 +290,7 @@ or b) not the human's turn."
               (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
               (.addWindowListener (proxy [WindowAdapter] []
                                     (windowClosed [^WindowEvent we]
-                                      (stop-background-threads))))
+                                      (halt-program))))
               (.setResizable false)
               (.add canvas)
               (.pack))))
@@ -294,15 +306,24 @@ or b) not the human's turn."
   [game-state]
   ;; human at index 0 so that rotation by ID makes sense
   (let [player-fns [make-human-move make-bot-move]
-        ending (cc/play game-state
-                        (vec (rotate human-player-id player-fns)))]
-    ;; time passes...
-    ((ts println) "Game over:" (:history ending))
-    (SwingUtilities/invokeLater (partial update-ui-game-state ending))))
+        ending (try (cc/play game-state
+                             (vec (rotate human-player-id player-fns)))
+                    (catch InterruptedException ie nil))] ;; requires clj > 1.3
+    (when ending ;; if not interrupted
+      ((ts println) "Game over:" (:history ending))
+      (SwingUtilities/invokeLater (partial update-ui-game-state ending)))))
 
-(defn -main
-  "Start application. Takes no arguments."
-  [& args]
+(defn launch
+  "Start application. Use this from the REPL, combined with :require +
+:reload. (Does not shut down agents, unlike -main.)"
+  []
   (let [initial-game (g/make-game dim 0)]
     (SwingUtilities/invokeLater (partial launch-gui initial-game))
     (run-in-background (partial launch-game initial-game) "Game loop")))
+
+(defn -main
+  "Start as stand-alone application. Takes no arguments."
+  [& args]
+  (alter-var-root #'run-via-main (constantly true))
+  (launch)
+  nil)
