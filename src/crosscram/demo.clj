@@ -305,10 +305,29 @@ or b) not the human's turn."
   "Describe the results of a finished game."
   [ending]
   {:pre [(not= :move (-> ending :history peek :type))]}
-  (let [human-won? (= (-> ending :history peek :player-id) bot-player-id)
+  (let [last-event (-> ending :history peek)
+        human-won? (= (:player-id last-event) bot-player-id)
         turns (dec (count (:history ending)))]
-    (format "The %s won after %d turn%s."
-            (if human-won? "human" "bot") turns (when-not (= 1 turns) "s"))))
+    (case (:type last-event)
+          :cant-move
+          (format "The %s won after %d turn%s."
+                  (if human-won? "human" "bot")
+                  turns
+                  (when (not= 1 turns) "s"))
+
+          :invalid-move
+          (format "The %s made an invalid move, and forfeited: %s"
+                  (if human-won? "bot" "human")
+                  (:return last-event))
+
+          :player-error
+          (if (contains? last-event :error)
+            (format "The %s errored out, and forfeited: %s"
+                    (if human-won? "bot" "human")
+                    (:error last-event))
+            (format "The %s returned a non-domino, and forfeited: %s"
+                    (if human-won? "bot" "human")
+                    (pr-str (:return last-event)))))))
 
 (defn launch-game
   "Start a game loop with a bot and human player."
