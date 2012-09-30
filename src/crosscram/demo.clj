@@ -20,6 +20,13 @@ to update the UI to the latest game state."
    [java.awt.geom Line2D Line2D$Double Rectangle2D Rectangle2D$Double]
    [java.awt.event MouseAdapter MouseEvent WindowAdapter WindowEvent]))
 
+;;;; Settings
+
+(def dim [5 8])
+
+(def human-player-id 0) ;; FIXME: This is required to be 0 for now.
+(def bot-player-id (mod (inc human-player-id) 2))
+
 ;;;; Util
 
 (defn rotate
@@ -69,12 +76,15 @@ run on an agent thread, serially."
        (ref-set bg-threads rt)
        (.stop ft)))))
 
-;;;; Settings
+(def run-via-main "Set to true at launch if started via -main."
+  false)
 
-(def dim [5 8])
-
-(def human-player-id 0) ;; FIXME: This is required to be 0 for now.
-(def bot-player-id (mod (inc human-player-id) 2))
+(defn halt-program
+  "Stop all background threads and allow program to exit."
+  []
+  (stop-background-threads)
+  (when run-via-main
+    (shutdown-agents)))
 
 ;;;; State
 
@@ -87,6 +97,35 @@ run on an agent thread, serially."
 
 (def game "Atom: Game's most recent state, from player 0 perspective."
   (atom nil))
+
+;;;; Game logic
+
+(declare update-ui-game-state) ;; TODO: Is it possible to avoid this?
+
+(defn horiz-move-for-cell
+  [cell]
+  (when-let [[r c] cell]
+    [[r c] [r (inc c)]]))
+
+(defn make-human-move
+  "Block until human has moved, then return move."
+  [g]
+  (SwingUtilities/invokeLater (partial update-ui-game-state g))
+  (reset! human-turn? true)
+  ;; Block until human has moved
+  (.take human-moves))
+
+(defn complete-human-move
+  "Complete the human's move."
+  [cell]
+  (.put human-moves (horiz-move-for-cell cell))
+  (reset! human-turn? false))
+
+(defn make-bot-move
+  "Make the bot move."
+  [g]
+  (SwingUtilities/invokeLater (partial update-ui-game-state g))
+  (bot/make-move g))
 
 ;;;; Geometry
 
@@ -124,35 +163,6 @@ or nil if not on a cell."
         c (canvas-to-strip cols x)]
     (when (and r c)
       [r c])))
-
-;;;; Game logic
-
-(declare update-ui-game-state) ;; TODO: Is it possible to avoid this?
-
-(defn horiz-move-for-cell
-  [cell]
-  (when-let [[r c] cell]
-    [[r c] [r (inc c)]]))
-
-(defn make-human-move
-  "Block until human has moved, then return move."
-  [g]
-  (SwingUtilities/invokeLater (partial update-ui-game-state g))
-  (reset! human-turn? true)
-  ;; Block until human has moved
-  (.take human-moves))
-
-(defn complete-human-move
-  "Complete the human's move."
-  [cell]
-  (.put human-moves (horiz-move-for-cell cell))
-  (reset! human-turn? false))
-
-(defn make-bot-move
-  "Make the bot move."
-  [g]
-  (SwingUtilities/invokeLater (partial update-ui-game-state g))
-  (bot/make-move g))
 
 ;;;; Rendering - double-buffering and incremental updates
 
@@ -256,16 +266,6 @@ or b) not the human's turn."
         (fill-cell gfx cell)))))
 
 ;;;; Launch
-
-(def run-via-main "Set to true at launch if started via -main."
-  false)
-
-(defn halt-program
-  "Stop all background threads and allow program to exit."
-  []
-  (stop-background-threads)
-  (when run-via-main
-    (shutdown-agents)))
 
 (defn launch-gui
   "Create and display the GUI."
