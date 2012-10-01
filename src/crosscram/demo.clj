@@ -202,20 +202,13 @@ or b) not the human's turn."
   (let [dim (:dims game-state)
         [gw gh] (canvas-size dim)]
     ;; bg
-    (.setColor gfx (Color. 255 255 255))
+    (.setColor gfx (Color/BLACK))
     (.fill gfx (Rectangle. 0 0 gw gh))
-    ;; grid
-    (.setColor gfx (Color. 0 0 0))
-    ;; row lines
-    (.fill gfx (Rectangle. 0 0 gw line-width))
-    (doseq [i (range 1 (inc (dim 0)))]
-      (.fill gfx (Rectangle. 0 (* i (+ cell-width line-width))
-                             gw line-width)))
-    ;; col lines
-    (.fill gfx (Rectangle. 0 0 line-width gh))
-    (doseq [i (range 1 (inc (dim 1)))]
-      (.fill gfx (Rectangle. (* i (+ cell-width line-width)) 0
-                             line-width gh)))
+    ;; cells -- simpler code than drawing grid lines
+    (.setColor gfx (Color/WHITE))
+    (doseq [r (range (dim 0))
+            c (range (dim 1))]
+      (fill-cell gfx [r c]))
     ;; existing moves
     (render-new-events gfx (:history game-state))))
 
