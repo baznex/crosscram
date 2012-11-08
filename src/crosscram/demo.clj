@@ -107,6 +107,7 @@ run on an agent thread, serially."
   (when-let [[r c] cell]
     [[r c] [r (inc c)]]))
 
+;; on: game thread
 (defn make-human-move
   "Block until human has moved, then return move."
   [g]
@@ -115,12 +116,14 @@ run on an agent thread, serially."
   ;; Block until human has moved
   (.take human-moves))
 
+;; on: event thread
 (defn complete-human-move
   "Complete the human's move."
   [cell]
   (.put human-moves (horiz-move-for-cell cell))
   (reset! human-turn? false))
 
+;; on: game thread
 (defn make-bot-move
   "Make the bot move."
   [g]
@@ -172,8 +175,10 @@ or nil if not on a cell."
 or b) not the human's turn."
   (atom nil))
 
-(def buffer-graphics (promise))
-(def buffer-image (promise))
+(def buffer-graphics "Contains a Graphics2D once ready to render."
+  (promise))
+(def buffer-image "Contains a BufferedImage once ready to render."
+  (promise))
 
 (defn fill-cell
   "Fill a game cell."
@@ -335,14 +340,14 @@ or b) not the human's turn."
 
 (defn launch
   "Start application. Use this from the REPL, combined with :require +
-:reload. (Does not shut down agents, unlike -main.)"
+:reload. (Does not shut down agents or exit JVM at end of game, unlike -main.)"
   []
   (let [initial-game (g/make-game dim 0)]
     (SwingUtilities/invokeLater (partial launch-gui initial-game))
     (run-in-background (partial launch-game initial-game) "Game loop")))
 
 (defn -main
-  "Start as stand-alone application. Takes no arguments."
+  "Start as stand-alone application. Takes no arguments. Exits JVM at game end."
   [& args]
   (alter-var-root #'run-via-main (constantly true))
   (launch)
