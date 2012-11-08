@@ -93,7 +93,7 @@ run on an agent thread, serially."
   (LinkedBlockingQueue.))
 
 (def human-turn? "Atom of boolean: Human's turn?"
-  (atom (zero? human-player-id)))
+  (atom false))
 
 (def game "Atom: Game's most recent state, from player 0 perspective."
   (atom nil))
