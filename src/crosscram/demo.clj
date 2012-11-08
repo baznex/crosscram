@@ -25,7 +25,6 @@ to update the UI to the latest game state."
 (def dim [5 8])
 
 (def human-player-id 0) ;; FIXME: This is required to be 0 for now.
-(def bot-player-id (mod (inc human-player-id) 2))
 
 ;;;; Util
 
@@ -84,7 +83,8 @@ run on an agent thread, serially."
   []
   (stop-background-threads)
   (when run-via-main
-    (shutdown-agents)))
+    ;; Could use (shutdown-agents), but this is more more future-proof:
+    (System/exit 0)))
 
 ;;;; State
 
@@ -273,7 +273,6 @@ or b) not the human's turn."
                    [cw ch] (canvas-size (:dims game-state))]
                (doto (proxy [JComponent] []
                        (paint [^Graphics2D g] (renderer g)))
-                 (.setDoubleBuffered true)
                  (.addMouseListener mouse-adapter)
                  (.addMouseMotionListener mouse-adapter)
                  (.setPreferredSize (Dimension. cw ch))))))
@@ -299,7 +298,7 @@ or b) not the human's turn."
   [ending]
   {:pre [(:over? ending)]}
   (let [last-event (-> ending :history peek)
-        human-won? (= (:player-id last-event) bot-player-id)
+        human-won? (not= (:player-id last-event) human-player-id)
         turns (dec (count (:history ending)))]
     (case (:type last-event)
           :cant-move
