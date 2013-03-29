@@ -21,7 +21,7 @@ gives the second player a transposed view of the board.)"
 ;; there or otherwise be up to no good.
 
 (def over?
-  "Returns true if there are no horizontal moves possible, false otherwise. 
+  "Returns true if there are no horizontal moves possible, false otherwise.
 Takes a board as argument."
   (complement game/can-move?))
 
@@ -45,9 +45,9 @@ Takes a board as argument."
         (recur new-game (rest bot-funs))))))
 
 (defn play-symmetric [game bot-a bot-b games-to-play]
-  (loop [scoreboard {}]
-    (if (= games-to-play (apply + (vals scoreboard)))
-      scoreboard
-      (let [g1 (winner (play game bot-a bot-b))
-            g2 (winner (play game bot-b bot-a))]
-        (recur (merge-with + scoreboard (score g1 g2)))))))
+  (let [play-round (fn [_]
+                     (->> [(play game bot-a bot-b) (play game bot-b bot-a)]
+                       (map winner)
+                       (apply score)))]
+    (->> (pmap play-round (range games-to-play))
+      (reduce (partial merge-with +)))))
