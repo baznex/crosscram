@@ -10,13 +10,12 @@
       1
       0))
 
-; (defn coverage
-;   "Return the number of moves blocked by a domino."
-;   [mm enemy-moves]
-;   (+ (map #(covered? mm %) enemy-moves)))
+(defn coverage
+   "Return the number of moves blocked by a domino."
+   [mm enemy-moves]
+   (apply + (map #(covered? mm %) enemy-moves)))
 
-; (defn make-move [game]
-;   (let [id (:player-id game)
-;         my-wtd-moves (map coverage (game/available-moves (:board game)))
-;         enemy-moves (game/available-moves (game/rotate-board (:board game) id))]
-;     (first (sort #(coverage % enemy-moves) my-wtd-moves))))
+ (defn make-move [game]
+   (let [my-moves (game/available-moves (:board game))
+         enemy-moves (game/available-moves (game/transpose (:board game)))]
+     (first (sort-by #(coverage % enemy-moves) > my-moves))))
