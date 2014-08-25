@@ -26,11 +26,17 @@
                (gen/tuple (gen/return cell)
                           (gen/return (horiz-cell cell)))))))
 
+(defn not-move
+  "Returns a predicate which evalutes to `true`
+  if a move does not contain either of the cells `m` or `n`"
+  [[m n]]
+  #(not (some #{m n}) %))
+
 (def covered-prop-simple
   (prop/for-all [mm (gen-move)]
                 (= (covered? mm mm) 1)))
 
 (def not-covered-prop-simple
   (prop/for-all [mm (gen-move)]
-                (let [nn (gen/such-that #(not (some #{(% 0) (% 1)} mm)) (gen-move))]
+                (let [nn (gen/such-that (not-move mm) (gen-move))]
                   (= (covered? mm nn) 0))))
