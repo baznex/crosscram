@@ -32,5 +32,5 @@
 
 (def not-covered-prop-simple
   (prop/for-all [mm (gen-move)]
-                (let [nn (gen/such-that #((not (some #{%} mm))) gen-move)]
+                (let [nn (gen/such-that #(not (some #{(% 0) (% 1)} mm)) (gen-move))]
                   (= (covered? mm nn) 0))))
