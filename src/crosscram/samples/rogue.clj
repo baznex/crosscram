@@ -9,8 +9,8 @@
 
 (defn coverage
    "Return the number of moves blocked by a domino."
-   [mm opp-moves]
-   (apply + (map #(covered? mm %) opp-moves)))
+   [xx xxs]
+   (count (filter (partial covered? xx) xxs)))
 
  (defn make-move [game]
    (let [my-moves (game/available-moves (:board game))
