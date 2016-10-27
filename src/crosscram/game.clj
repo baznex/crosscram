@@ -1,7 +1,11 @@
 (ns crosscram.game
   "Game knowledge.
 
+## Terms
+
 In this documentation, \"vector\" means any indexed, sequential collection.
+
+## Boards
 
 A board is a 2-dimensional matrix. Create with #'board, access with
 #'location-empty?
@@ -9,25 +13,49 @@ A board is a 2-dimensional matrix. Create with #'board, access with
 A cell on the board is addressed by a vector of [row column], zero-indexed.
 These may also be called coordinates or squares.
 
+## Dominoes
+
 A domino is a vector of two squares: [[r0 c0] [r1 c1]].
 The order of the squares in a vector is not important, but the game engine
 will not alter it.
 
-A move is simply a domino.
+## Moves
 
-A game history is a vector of moves. The index of each move is called
-its ordinal; the move at index 0 was the first move. A new game will have
-an empty history vector.
+A move is simply a domino. A \"valid move\" is in reference to a board,
+whereas a domino may be judged valid or not without reference to anything.
+
+## History
+
+A game history is a vector of events. An event is a map of :type (:move,
+:invalid-move, :player-error, :cant-move) and possibly other keys
+depending on :type. A :move is a valid move that can be placed on the current
+board; an :invalid-move is a valid domino that cannot be played on this board,
+including mis-oriented dominoes. A :player-error is a throw or a returned value
+that is not a domino. :cant-move occurs when the game is over -- the player
+has not been consulted. A completed game's history ends with a non-:move event.
+
+* :player-id - 0 or 1
+* :duration - bot's elapsed time (nanoseconds), for all but :cant-move
+* :move - played domino (canonicalized), for :move or :invalid-move
+* :error - with :player-error, the thrown error (if applicable)
+* :return - with :player-error, the returned value (if applicable)
+
+The index of each event is called its ordinal; the event at index 0 was
+the first event. A new game will have an empty history vector.
 
 The board contains an alternate view of history. Each cell contains either
 the ordinal (from the history vector) of the move that covered that square,
-or nil if the square is open.
+or nil if the square is open. Future work may add additional cell value types,
+but open squares will remain logical-false for the foreseeable future.
+
+## Gamestate
 
 A gamestate value (which is provided to the bot) is a map of:
 :board - a board value, as defined above
 :dims - a vector of [row-count column-count]
 :history - a history value, as defined above
 :player-id - 0 or 1, indicating which player's view this is
+:over? - indicates the game is over and the last history event records this
 
 This will sometimes simply be called a game value.")
 
@@ -98,6 +126,19 @@ perspective. (Unary form defaults to 1.) Player ID will be used modulo 2."
   [x]
   (and (integer? x) (pos? x)))
 
+;;;; History
+
+(defn rotate-event
+  "Rotate a history event from player 0's perspective to the specified player's
+perspective. (Unary form defaults to 1.) Player ID will be used modulo 2."
+  ([event]
+     (rotate-event event 1))
+  ([event player-id]
+     {:pre [(:type event)]}
+     (if (#{:move :invalid-move} (:type event))
+       (update-in event [:move] rotate-domino player-id)
+       event)))
+
 ;;;; Boards
 
 (defn make-board
@@ -125,6 +166,7 @@ perspective. (Unary form defaults to 1.) Player ID will be used modulo 2."
   ([board]
      (rotate-board board 1))
   ([board player-id]
+     {:pre [(vector? board)]}
      (if (zero? (mod player-id 2))
        board
        (transpose board))))
@@ -148,7 +190,7 @@ moves, rotate the board first."
 (defn lookup-square
   "Discover if a board position is empty. Given a location [r c] on a board,
 return the ordinal of the move that filled it, or nil if empty. Invalid
-coordinates produce ::outside-board value."
+coordinates produce :crosscram.game/outside-board value."
   [board square]
   (get-in board square ::outside-board))
 
@@ -187,14 +229,14 @@ for the indicated player. The player ID may be 0 or 1."
      :history []
      :player-id player-id}))
 
-(defn move
-  "Add a move (a domino) to a game."
-  [game move]
-  (let [ord (count (:history game))
-        board (place-domino (:board game) move ord)]
-    (-> game
-        (assoc-in [:history ord] (canonical-domino move))
-        (assoc :board board))))
+(defn conj-event
+  "Apply a history event to a game. Requires canonicalized dominoes."
+  [game event]
+  (let [event-ord (count (:history game))
+        updated (if (= :move (:type event))
+                  (update-in game [:board] place-domino (:move event) event-ord)
+                  game)]
+    (update-in updated [:history] conj event)))
 
 (defn rotate-game
   "Rotate a game from player 0's perspective to the specified player's
@@ -203,9 +245,16 @@ NOTE: This updates the :player-id key as well."
   ([game]
      (rotate-game game 1))
   ([game player-id]
+     {:pre [(:board game)]}
      (if (zero? (mod player-id 2))
        game
        {:board (rotate-board (:board game) player-id)
         :dims (let [[r c] (:dims game)] [c r])
-        :history (vec (map rotate-domino (:history game)))
+        :history (vec (map rotate-event (:history game)))
         :player-id (mod (+ (:player-id game) player-id) 2)})))
+
+(defn winner
+  "Returns the ID of the winning player of a finished game."
+  [game]
+  {:pre [(:over? game)]}
+  (mod (count (:history game)) 2))
