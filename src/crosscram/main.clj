@@ -26,4 +26,5 @@
                     (:make-move fns-a)
                     (:make-move fns-b)
                     num-games)]
-        (println "Scores:" scores)))))
+        (println "Scores:" scores)
+        (shutdown-agents)))))
